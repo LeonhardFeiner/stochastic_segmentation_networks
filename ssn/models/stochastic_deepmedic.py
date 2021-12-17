@@ -62,7 +62,8 @@ class StochasticDeepMedic(DeepMedic):
                 print('Covariance became not invertible using independent normals for this batch!')
                 base_distribution = td.Independent(td.Normal(loc=mean, scale=torch.sqrt(cov_diag)), 1)
 
-        distribution = ReshapedDistribution(base_distribution, event_shape)
+        reshape_transform = td.transforms.ReshapeTransform(cov_diag.shape[1:], event_shape)
+        distribution = td.TransformedDistribution(base_distribution, reshape_transform)
 
         shape = (batch_size,) + event_shape
         logit_mean = mean.view(shape)
