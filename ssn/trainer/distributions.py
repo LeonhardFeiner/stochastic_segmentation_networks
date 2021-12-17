@@ -15,7 +15,7 @@ class ReshapedDistribution(td.Distribution):
 
     @property
     def arg_constraints(self):
-        return self.base_distribution.arg_constraints()
+        return {}
 
     @property
     def mean(self):
