@@ -17,20 +17,11 @@ class StochasticSegmentationNetworkLossMCIntegral(nn.Module):
         super().__init__()
         self.num_mc_samples = num_mc_samples
 
-    @staticmethod
-    def fixed_re_parametrization_trick(dist, num_samples):
-        assert num_samples % 2 == 0
-        samples = dist.rsample((num_samples // 2,))
-        mean = dist.mean.unsqueeze(0)
-        samples = samples - mean
-        return torch.cat([samples, -samples]) + mean
-
     def forward(self, logits, target, distribution, **kwargs):
         batch_size = logits.shape[0]
         num_classes = logits.shape[1]
         assert num_classes >= 2  # not implemented for binary case with implied background
-        # logit_sample = distribution.rsample((self.num_mc_samples,))
-        logit_sample = self.fixed_re_parametrization_trick(distribution, self.num_mc_samples)
+        logit_sample = distribution.rsample((self.num_mc_samples,))
         target = target.unsqueeze(1)
         target = target.expand((self.num_mc_samples,) + target.shape)
 
