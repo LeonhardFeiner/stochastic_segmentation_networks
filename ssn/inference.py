@@ -7,6 +7,7 @@ from nifti.savers import NiftiPatchSaver
 
 
 def run_inference(job_dir, test_csv_path, config_file, device, saved_model_paths, overwrite):
+    job_dir = os.path.expanduser(job_dir)
     if not os.path.exists(job_dir):
         os.makedirs(job_dir)
     else:

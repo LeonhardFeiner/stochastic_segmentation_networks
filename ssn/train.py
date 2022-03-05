@@ -60,6 +60,8 @@ def set_device(device):
 
 
 def run_ensemble(job_dir, train_csv_path, valid_csv_path, config_file, num_epochs, device, random_seeds, overwrite):
+    job_dir = os.path.expanduser(job_dir)
+    
     random_seeds = [int(seed) for seed in random_seeds.split()]
 
     if len(np.unique(random_seeds)) != len(random_seeds):
