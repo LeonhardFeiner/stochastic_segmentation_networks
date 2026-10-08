@@ -30,8 +30,8 @@ class StochasticDeepMedic(DeepMedic):
         use_zero_output=False,
         use_mask=True,
         use_softmax=False,
-        use_log=True,
-        use_symmetric_sampling=True,
+        use_log=False,
+        use_symmetric_sampling=False,
     ):
         super().__init__(
             input_channels,
@@ -102,7 +102,7 @@ class StochasticDeepMedic(DeepMedic):
             )
         else:
             try:
-                if self.symmetric_sampling:
+                if self.use_symmetric_sampling:
                     base_distribution = SymmetricLowRankMultivariateNormal(
                         loc=mean, cov_factor=cov_factor, cov_diag=cov_diag
                     )
@@ -110,7 +110,7 @@ class StochasticDeepMedic(DeepMedic):
                     base_distribution = td.LowRankMultivariateNormal(
                         loc=mean, cov_factor=cov_factor, cov_diag=cov_diag
                     )
-            except:
+            except (RuntimeError, ValueError):
                 print(
                     "Covariance became not invertible using independent normals for this batch!"
                 )

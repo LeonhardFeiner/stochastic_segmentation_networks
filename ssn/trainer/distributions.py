@@ -111,12 +111,14 @@ class AxisSimplex(constraints.Constraint):
 
     def __init__(self, axis) -> None:
         super().__init__()
-        self.axis
+        self.axis = axis
 
     event_dim = 1
 
     def check(self, value):
-        return torch.all(value >= 0, dim=-1) & ((value.sum(self.axis) - 1).abs() < 1e-6)
+        return torch.all(value >= 0, dim=self.axis) & (
+            (value.sum(self.axis) - 1).abs() < 1e-6
+        )
 
 
 class CenteredSoftmaxTransform(Transform):

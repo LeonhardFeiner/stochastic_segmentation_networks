@@ -80,7 +80,7 @@ class StochasticSegmentationNetworkLossMCIntegral(nn.Module):
                 self.label_smoothing,
                 logit_sample.dtype,
             )
-            log_prob_raw = -torch.sum(
+            log_prob_raw = torch.sum(
                 torch.log(logit_sample) * smooth_labels, axis=self.softmax_axis
             )
             # if self.label_smoothing != 0:
@@ -92,8 +92,14 @@ class StochasticSegmentationNetworkLossMCIntegral(nn.Module):
 
         elif self.is_logsoftmax:
             if self.label_smoothing:
-                smooth_target = self.smooth_one_hot(target, num_classes, logits.dtype)
-                log_prob_raw = -torch.sum(
+                smooth_target = smooth_one_hot(
+                    target,
+                    self.softmax_axis,
+                    num_classes,
+                    self.label_smoothing,
+                    logit_sample.dtype,
+                )
+                log_prob_raw = torch.sum(
                     logit_sample * smooth_target, axis=self.softmax_axis
                 )
             else:

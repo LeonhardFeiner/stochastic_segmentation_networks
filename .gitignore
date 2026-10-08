@@ -6,3 +6,4 @@ _unused
 *.nii.gz
 *.nii
 .DS_Store
+jobs

@@ -151,7 +151,7 @@ def calc_recall(cm):
 
 
 def calc_f1_score(cm):
-    return np.diag(cm) / np.sum(cm, axis=1)
+    return 2 * np.diag(cm) / (np.sum(cm, axis=0) + np.sum(cm, axis=1))
 
 
 class ClassificationMetrics(RunningConfusionMatrix):
