@@ -66,9 +66,9 @@ class LowRankMultivariateNormalRandomSampler(Sampler):
         shape = logit_mean.shape
         num_classes = shape[0]
         rank = int(cov_factor.shape[0] / num_classes)
-        logit_mean = logit_mean.view(-1)
-        cov_diag = cov_diag.view(-1)
-        cov_factor = cov_factor.view((rank, -1)).transpose(1, 0)
+        logit_mean = logit_mean.reshape(-1)
+        cov_diag = cov_diag.reshape(-1)
+        cov_factor = cov_factor.reshape((rank, -1)).transpose(1, 0)
         epsilon = 1e-3
         dist = td.LowRankMultivariateNormal(loc=logit_mean, cov_factor=cov_factor, cov_diag=cov_diag + epsilon)
         return dist, shape, rank

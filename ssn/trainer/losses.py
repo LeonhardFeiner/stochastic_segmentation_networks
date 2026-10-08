@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+import torch.distributions as td
 import math
 
 
@@ -126,11 +127,14 @@ class StochasticSegmentationNetworkLossMCIntegral(nn.Module):
 
 
 class StochasticSegmentationNetworkLossAnalytic(nn.Module):
-    def __init__(self, label_smoothing, softmax_axis=-4, is_logsoftmax=False):
+    def __init__(
+        self, label_smoothing, softmax_axis=-4, is_logsoftmax=False, detach_mean=False
+    ):
         super().__init__()
         self.label_smoothing = label_smoothing
         self.softmax_axis = softmax_axis
         self.is_logsoftmax = is_logsoftmax
+        self.detach_mean = detach_mean
 
     def smooth_one_hot(self, target, num_classes, dtype):
         return smooth_one_hot(
@@ -148,4 +152,21 @@ class StochasticSegmentationNetworkLossAnalytic(nn.Module):
         smooth_target = self.smooth_one_hot(target, num_classes, logits.dtype)
         if self.is_logsoftmax:
             smooth_target = torch.log(smooth_target)
-        return -torch.mean(distribution.log_prob(smooth_target)) / loss_normalizer
+
+        base = distribution.base_dist
+        if not (self.detach_mean and isinstance(base, td.LowRankMultivariateNormal)):
+            return -torch.mean(distribution.log_prob(smooth_target)) / loss_normalizer
+
+        # the change-of-variables Jacobian depends only on the target, so work in base space
+        x = smooth_target
+        for transform in reversed(distribution.transforms):
+            x = transform.inv(x)
+        # the covariance sees a detached mean, so the low-rank factors cannot absorb mean errors
+        covariance_log_prob = td.LowRankMultivariateNormal(
+            base.loc.detach(), base.cov_factor, base.cov_diag
+        ).log_prob(x)
+        # the mean is fit by a diagonal Gaussian with the (detached) diagonal variance
+        mean_log_prob = td.Independent(
+            td.Normal(base.loc, base.cov_diag.detach().sqrt()), 1
+        ).log_prob(x)
+        return -torch.mean(covariance_log_prob + mean_log_prob) / loss_normalizer

@@ -55,8 +55,8 @@ def calc_generalised_energy_distance(samples_dist_0, samples_dist_1, num_classes
     samples_dist_0 = samples_dist_0.reshape((len(samples_dist_0), -1))
     samples_dist_1 = samples_dist_1.reshape((len(samples_dist_1), -1))
     eye = np.eye(num_classes)
-    samples_dist_0 = eye[samples_dist_0].astype(np.bool)
-    samples_dist_1 = eye[samples_dist_1].astype(np.bool)
+    samples_dist_0 = eye[samples_dist_0].astype(bool)
+    samples_dist_1 = eye[samples_dist_1].astype(bool)
 
     cross = np.mean(distance(samples_dist_0, samples_dist_1))
     diversity_0 = np.mean(distance(samples_dist_0, samples_dist_0))
