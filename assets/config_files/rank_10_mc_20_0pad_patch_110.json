@@ -5,7 +5,10 @@
 			"num_classes": 4,
 			"fully_connected": [250, 250],
 			"feature_maps": [30, 30, 40, 40, 40, 40, 50, 50],
-			"rank": 10		
+			"rank": 10,
+			"use_zero_output": true,
+			"use_softmax": false,
+			"use_mask": false
 		}
 	},
 	"data": {
@@ -76,7 +79,7 @@
                 "eval_every": 5000
 	},
 	"loss": {
-		"StochasticSegmentationNetworkLossMCIntegral": {"num_mc_samples": 20, "label_smoothing": 0.2}
+		"StochasticSegmentationNetworkLossMCIntegral": {"num_mc_samples": 20, "label_smoothing": 0.2, "is_softmax": false}
 	},
 	"optimizer": {
 		"RMSprop": {

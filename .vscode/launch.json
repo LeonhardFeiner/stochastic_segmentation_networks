@@ -1,0 +1,72 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Preprocessing",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluation/preprocessing.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--input-dir",
+                "/home/feiner/datasets/BraTS",
+                "--output-dir",
+                "/home/feiner/datasets/BraTS/ssn",
+            ]
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Train",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/ssn/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--job-dir",
+                "~/pytorch_logs/ssn/2023/${input:config_file}/train",
+                "--config-file",
+                "assets/config_files/${input:config_file}.json",
+                "--train-csv-path",
+                "assets/BraTS2018_data/data_index_train.csv",
+                "--valid-csv-path",
+                "assets/BraTS2018_data/data_index_valid.csv",
+                "--num-epochs",
+                "100",
+                "--device",
+                "0",
+                "--random-seeds",
+                "2",
+                "--overwrite",
+                "0"
+            ],
+            "justMyCode": false
+        }
+    ],
+    "inputs": [
+        {
+            "id": "config_file",
+            "type": "pickString",
+            "description": "which config",
+            "options": [
+                "rank_10_mc_20_patch_110",
+                "rank_10_analytic_patch_110",
+                "rank_10_analyticlog_patch_110",
+                "rank_10_mc_20_0pad_patch_110",
+                "rank_10_mc_20_0padsoftmax_patch_110",
+                "rank_10_mc_20_0padlogsoftmax_patch_110"
+            ],
+            "default": "nodigit"
+        }
+    ]
+}

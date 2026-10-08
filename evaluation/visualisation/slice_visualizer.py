@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import svgutils.transform as sg
+# import svgutils.transform as sg
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
@@ -54,7 +54,7 @@ class SliceVisualizer(object):
         self.hide_true_names = hide_true_names
         self.save_individual_thumbs = save_individual_thumbs
         self.image_paths = []
-        self.all_in_one_image = sg.SVGFigure()
+        # self.all_in_one_image = sg.SVGFigure()
         self.i = 0
         self.j = 0
 
@@ -98,12 +98,12 @@ class SliceVisualizer(object):
             svg_file_path = file_path.replace('.pdf', '.svg')
             plt.imsave(svg_file_path, slice_, format='svg', cmap=plt.get_cmap(cmap))
 
-            svg_image = sg.fromfile(svg_file_path)
-            width = float(svg_image.width.strip('pt'))
-            height = float(svg_image.height.strip('pt'))
-            plot = svg_image.getroot()
-            plot.moveto(width * self.j, height * (self.i + i))
-            self.all_in_one_image.append([plot])
+            # svg_image = sg.fromfile(svg_file_path)
+            # width = float(svg_image.width.strip('pt'))
+            # height = float(svg_image.height.strip('pt'))
+            # plot = svg_image.getroot()
+            # plot.moveto(width * self.j, height * (self.i + i))
+            # self.all_in_one_image.append([plot])
             os.remove(svg_file_path)
         self.j += 1
 
@@ -137,7 +137,7 @@ class SliceVisualizer(object):
                 self.save_image(case_id, heat_map, slice_numbers, '_' + suffix, cmap='inferno')
 
             self.i += 1
-        self.all_in_one_image.save(os.path.join(self.output_path, 'thumbs.svg'))
+        # self.all_in_one_image.save(os.path.join(self.output_path, 'thumbs.svg'))
 
 
 class MostLoadedSliceVisualiser(SliceVisualizer):

@@ -1,0 +1,25 @@
+name: py3ssn
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+  - simpleitk
+  - nvidia
+dependencies:
+  - pytorch
+  - torchvision
+  - pytorch-cuda
+  - black
+  - matplotlib
+  - nb_conda
+  - numpy
+  - pandas
+  - pip
+  - pylint
+  - python
+  - scipy
+  - simpleitk
+  # - svgutils
+  - tabulate
+  - tqdm
+  - tensorboard

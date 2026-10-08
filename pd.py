@@ -1,9 +1,31 @@
-import os
-import SimpleITK as sitk
-import argparse
+# %%
+import pickle
 import pandas as pd
-import numpy as np
-from tqdm import tqdm
+
+# %%
+# with open("assets/BraTS2018_data/data_index.pkl", "rb") as f:
+# df = pickle.load(f)
+df = pd.read_pickle("assets/BraTS2018_data/data_index.pkl")
+# %%
+df_exists = df.query("exists")
+_  # %%
+df.shape, df_exists.shape
+# %%
+df_exists
+# %%
+df_mapping = pd.read_csv(
+    "/home/feiner/datasets/BraTS/MICCAI_BraTS2020_TrainingData/name_mapping.csv"
+)
+
+# %%
+df["BraTS_2020_subject_ID"] = (
+    df.index.to_series().str.split("/", expand=True).iloc[:, -1]
+)
+df
+
+# %%
+df_merged = pd.merge(df, df_mapping, on="BraTS_2020_subject_ID", how="left")
+# %%
 
 train_ids = [
     "HGG/Brats18_2013_10_1/Brats18_2013_10_1",
@@ -299,115 +321,43 @@ test_ids = [
     "LGG/Brats18_TCIA13_654_1/Brats18_TCIA13_654_1",
 ]
 
+# %%
+df_split_raw = pd.concat(
+    {
+        "train": pd.Series(train_ids),
+        "val": pd.Series(valid_ids),
+        "test": pd.Series(test_ids),
+    }
+)
+df_split = df_split_raw.str.split("/", expand=True).rename(
+    columns={0: "Grade", 1: "BraTS_2018_subject_ID"}
+)
+df_split["id"] = df_split_raw
+df_split.reset_index(inplace=True, names=["split", "index"])
+# %%
+df_joint = pd.merge(
+    df_split,
+    df_merged,
+    how="left",
+    on=["Grade", "BraTS_2018_subject_ID"],
+)
+df_joint.set_index(["split", "index"], inplace=True)
 
-def get_brain_mask(t1):
-    brain_mask = sitk.GetImageFromArray(
-        (sitk.GetArrayFromImage(t1) > 0).astype(np.uint8)
-    )
-    brain_mask.CopyInformation(t1)
-    brain_mask = sitk.Cast(brain_mask, sitk.sitkUInt8)
-    return brain_mask
+# %%
 
+for split in ["train", "val", "test"]:
+    df_joint.loc[
+        split,
+        [
+            "id",
+            "seg",
+            "sampling_mask",
+            "flair",
+            "t1",
+            "t1ce",
+            "t2",
+        ],
+    ].to_csv(f"assets/BraTS2018_data/data_index_{split}.csv", index=False)
 
-def z_score_normalisation(
-    channel, brain_mask, cutoff_percentiles=(5.0, 95.0), cutoff_below_mean=True
-):
-    low, high = np.percentile(channel[brain_mask.astype(np.bool_)], cutoff_percentiles)
-    norm_mask = np.logical_and(
-        brain_mask, np.logical_and(channel > low, channel < high)
-    )
-    if cutoff_below_mean:
-        norm_mask = np.logical_and(norm_mask, channel > np.mean(channel))
-    masked_channel = channel[norm_mask]
-    normalised_channel = (channel - np.mean(masked_channel)) / np.std(masked_channel)
-    return normalised_channel
-
-
-def fix_segmentation_labels(seg):
-    array = sitk.GetArrayFromImage(seg)
-    array[array == 4] = 3
-    new_seg = sitk.GetImageFromArray(array)
-    new_seg.CopyInformation(seg)
-    return new_seg
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--input-dir", required=True, type=str, help="Path to input directory."
-    )
-    parser.add_argument(
-        "--output-dir", required=True, type=str, help="Path to output directory."
-    )
-
-    parse_args, unknown = parser.parse_known_args()
-
-    output_dataframe = pd.DataFrame()
-    for subdir_0 in [
-        "MICCAI_BraTS2020_TrainingData",
-        "MICCAI_BraTS2020_ValidationData",
-    ]:
-        for subdir_1 in tqdm(
-            list(os.listdir(os.path.join(parse_args.input_dir, subdir_0)))
-        ):
-            try:
-                id_ = os.path.join(subdir_0, subdir_1) + "/" + subdir_1
-                output_dataframe.loc[id_, "subset"] = subdir_0
-                print(id_)
-                seg = fix_segmentation_labels(
-                    sitk.ReadImage(
-                        os.path.join(parse_args.input_dir, id_) + "_seg.nii.gz"
-                    )
-                )
-                output_path = os.path.join(parse_args.output_dir, id_) + f"_seg.nii.gz"
-                output_dataframe.loc[id_, "seg"] = output_path
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                sitk.WriteImage(seg, output_path)
-
-                t1 = sitk.ReadImage(
-                    os.path.join(parse_args.input_dir, id_) + "_t1.nii.gz"
-                )
-                brain_mask = get_brain_mask(t1)
-                output_path = (
-                    os.path.join(parse_args.output_dir, id_) + f"_brain_mask.nii.gz"
-                )
-                output_dataframe.loc[id_, "sampling_mask"] = output_path
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                sitk.WriteImage(brain_mask, output_path)
-
-                for suffix in ["flair", "t1", "t1ce", "t2"]:
-                    channel = sitk.ReadImage(
-                        os.path.join(parse_args.input_dir, id_) + f"_{suffix:s}.nii.gz"
-                    )
-                    channel_array = sitk.GetArrayFromImage(channel)
-                    normalised_channel_array = z_score_normalisation(
-                        channel_array, sitk.GetArrayFromImage(brain_mask)
-                    )
-                    normalised_channel = sitk.GetImageFromArray(
-                        normalised_channel_array
-                    )
-                    normalised_channel.CopyInformation(channel)
-                    output_path = (
-                        os.path.join(parse_args.output_dir, id_) + f"_{suffix:s}.nii.gz"
-                    )
-                    output_dataframe.loc[id_, suffix] = output_path
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                    sitk.WriteImage(normalised_channel, output_path)
-            except Exception as e:
-                output_dataframe.loc[id_, "error"] = str(e)
-                output_dataframe.loc[id_, "exists"] = False
-                print(e)
-                print(f"Failed to process {id_}")
-            else:
-                output_dataframe.loc[id_, "exists"] = True
-    output_dataframe.index.name = "id"
-    os.makedirs("assets/BraTS2018_data", exist_ok=True)
-
-    output_dataframe.to_pickle("assets/BraTS2018_data/data_index.pkl")
-
-    # train_index = output_dataframe.loc[train_ids]
-    # train_index.to_csv("assets/BraTS2018_data/data_index_train.csv")
-    # valid_index = output_dataframe.loc[valid_ids]
-    # valid_index.to_csv("assets/BraTS2018_data/data_index_valid.csv")
-    # test_index = output_dataframe.loc[test_ids]
-    # test_index.to_csv("assets/BraTS2018_data/data_index_test.csv")
+# %%
+df

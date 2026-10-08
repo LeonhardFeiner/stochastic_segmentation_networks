@@ -5,7 +5,11 @@
 			"num_classes": 4,
 			"fully_connected": [250, 250],
 			"feature_maps": [30, 30, 40, 40, 40, 40, 50, 50],
-			"rank": 10		
+			"rank": 8,
+			"use_zero_output": true,
+			"use_softmax": true,
+			"use_mask": false
+
 		}
 	},
 	"data": {
@@ -54,9 +58,9 @@
 		"num_workers": 3,
 		"max_cases_in_memory": 50,
 		"extra_metrics": {
-			"logit_mean": {"MultiChannelTensorDistribution": {"name": "logit_mean", "num_maps": 4}},
-			"cov_diag": {"MultiChannelTensorDistribution": {"name": "cov_diag", "num_maps": 4}},
-			"cov_factor": {"MultiChannelTensorDistribution": {"name": "cov_factor", "num_maps": 4}}}
+			"logit_mean": {"MultiChannelTensorDistribution": {"name": "logit_mean", "num_maps": 3}},
+			"cov_diag": {"MultiChannelTensorDistribution": {"name": "cov_diag", "num_maps": 3}},
+			"cov_factor": {"MultiChannelTensorDistribution": {"name": "cov_factor", "num_maps": 3}}}
 	},
 	"valid": {
 		"batch_size": 10,
@@ -76,7 +80,7 @@
                 "eval_every": 5000
 	},
 	"loss": {
-		"StochasticSegmentationNetworkLossMCIntegral": {"num_mc_samples": 20, "label_smoothing": 0.2}
+		"StochasticSegmentationNetworkLossAnalytic": {"label_smoothing": 0.3}
 	},
 	"optimizer": {
 		"RMSprop": {
