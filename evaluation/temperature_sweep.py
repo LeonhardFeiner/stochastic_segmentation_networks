@@ -58,10 +58,11 @@ if __name__ == '__main__':
     parser.add_argument('--num-cases', default=10, type=int)
     parser.add_argument('--num-samples', default=20, type=int)
     parser.add_argument('--device', default=0, type=int)
+    parser.add_argument('--output-name', default='temperature_sweep.csv', type=str)
     args = parser.parse_args()
 
     results = sweep(args.path_to_prediction_csv, [float(t) for t in args.temperatures.split()],
                     args.num_cases, args.num_samples, torch.device(args.device))
-    output_path = os.path.join(os.path.dirname(args.path_to_prediction_csv), 'temperature_sweep.csv')
+    output_path = os.path.join(os.path.dirname(args.path_to_prediction_csv), args.output_name)
     results.to_csv(output_path, index=False)
     print(results.groupby('temperature')[['ged', 'diversity', 'sample_lesion_dice']].mean())

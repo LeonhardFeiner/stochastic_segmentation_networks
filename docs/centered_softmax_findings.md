@@ -34,10 +34,10 @@ protocol (5000 mean-only steps, then 5000 steps on all parameters, Adam lr 1e-3)
 | Target | MC (SSN) | Analytic, trained | Analytic, exact optimum |
 |---|---|---|---|
 | `on_off`: middle block all-0 or all-1 | 2% | 10% | 2–13% (ε = 0.01–0.3) |
-| `slide_bar`: boundary at 10 positions | **0%** | **34–50%** (rank 1–9) | **34%** |
+| `slide_bar`: boundary at 10 positions | **0%** | **34–51%** (rank 1–9) | **34–36%** (ε = 0.01–0.3) |
 
 The "exact optimum" uses the closed-form maximiser of the analytic loss (empirical mean and
-full covariance of the target logits). So the `slide_bar` failure comes from the objective,
+full covariance of the target logits, plus the same 0.01 variance floor). So the `slide_bar` failure comes from the objective,
 not from optimisation, and more rank or a different smoothing level does not fix it.
 
 ## BraTS
@@ -55,24 +55,29 @@ original schedule has about 1050), seed 1, on one RTX 8000. Configs:
 | `cmp_analytic_detached` | same, `detach_mean: true` | low-rank |
 
 `detach_mean` computes the low-rank log-density with a detached mean and adds a diagonal
-log-density that trains the mean. It was added because the plain low-rank analytic loss
-lets the covariance factors absorb large structured mean errors: one factor costs about one
-log-det term, while the squared error it removes grows with the number of voxels.
+log-density that trains the mean. It was added to test a hypothesis for why the plain
+low-rank analytic loss trains so badly: the covariance factors may absorb large structured
+mean errors, because one factor costs about one log-det term while the squared error it
+removes grows with the number of voxels. The diagonal run (no factors) trains well, which
+supports this. The detached run trains too, but its mean ends up worse than the diagonal
+one, so the hypothesis is not the whole story.
 
 ### Full validation set (`evaluation/evaluate.py`, 57 cases, 100 samples per case)
 
-| Run | Dice of mean prediction (NET / ED / ET / TC) | Avg. sample Dice (any lesion) | GED ↓ | Diversity | Pixel entropy |
+| Run | Dice of mean prediction (lesion / NET / ED / ET / TC) | Avg. sample Dice (lesion) | GED ↓ | Diversity | Pixel entropy |
 |---|---|---|---|---|---|
-| MC (SSN) | **0.50** / 0.60 / **0.60** / **0.68** | **0.63** | **0.70** | 0.63 | 0.04 |
-| Analytic, low-rank | 0.02 / 0.50 / 0.23 / 0.22 | 0.15 | 1.09 | 0.83 | 0.14 |
-| Analytic, diagonal | 0.17 / **0.61** / 0.49 / 0.51 | 0.25 | 1.00 | 0.87 | 0.14 |
-| Analytic, detached mean | 0.14 / 0.51 / 0.35 / 0.40 | 0.18 | 1.07 | 0.86 | 0.14 |
+| MC (SSN) | **0.78** / **0.50** / 0.60 / **0.60** / **0.68** | **0.63** | **0.70** | 0.63 | 0.04 |
+| Analytic, low-rank | 0.69 / 0.02 / 0.50 / 0.23 / 0.22 | 0.15 | 1.09 | 0.83 | 0.14 |
+| Analytic, diagonal | **0.78** / 0.17 / **0.61** / 0.49 / 0.51 | 0.25 | 1.00 | 0.87 | 0.14 |
+| Analytic, detached mean | 0.74 / 0.14 / 0.51 / 0.35 / 0.40 | 0.18 | 1.07 | 0.86 | 0.14 |
 
-NET = necrotic / non-enhancing tumor, ED = oedema, ET = enhancing tumor, TC = tumor core.
+Lesion = any tumor class, NET = necrotic / non-enhancing tumor, ED = oedema, ET = enhancing
+tumor, TC = tumor core.
 GED uses d = 1 − IoU averaged over the three tumor classes. With a single annotation per case
 it mixes sample accuracy with sample diversity.
 
-- The analytic losses give a usable mean: the diagonal one is close to MC on oedema.
+- The analytic losses give a usable mean: the diagonal one matches MC on the whole lesion
+  (0.78) and on oedema, but is much worse on the necrotic core.
 - Their samples are noisy, with 3× the pixel entropy of SSN, low per-sample Dice and higher
   GED.
 - Plain low-rank analytic training is unstable: necrotic-core validation Dice went
@@ -90,7 +95,8 @@ distribution. First 10 validation cases, 20 samples per temperature, mean ± s.e
 | Analytic, diagonal | 1.00 ± 0.02 | 0.89 ± 0.03 | **0.84 ± 0.04** | 0.97 ± 0.06 |
 | Analytic, detached mean | 1.08 ± 0.01 | 1.04 ± 0.02 | 0.97 ± 0.02 | 0.91 ± 0.03 |
 
-- SSN is **calibrated**: its GED is best at its own temperature.
+- SSN is **calibrated**: its GED is best at its own temperature. Heating it up is also worse
+  (T = 1.5: 0.72 ± 0.02, T = 2: 0.73 ± 0.04), and T = 1 beats T = 1.5 in 9 of the 10 cases.
 - The analytic models' noise is **too large**: cooling helps the diagonal and detached models.
 - Even at its best temperature, the best analytic model (diagonal, T = 0.25: 0.84) is clearly
   worse than SSN at T = 1 (0.66).
@@ -146,8 +152,8 @@ These are the reasons the original 2021–2023 experiments on this fork did not 
 cd ssn
 python toy_problem_analytic.py --target slide_bar --lr 1e-3 --steps 10000 --mean_only_steps 5000
 
-# BraTS training (one per config; about 50 min each on an RTX 8000, plus about 40-75 min
-# for the full-volume inference at the last epoch)
+# BraTS training (one per config; about 50 min each on an RTX 8000, plus about 75 min
+# for the full-volume inference at the last epoch, measured with other jobs on the GPU)
 python train.py --job-dir ../jobs/cmp_mc --config-file ../assets/config_files/cmp_mc.json \
     --train-csv-path ../assets/BraTS2018_data/data_index_train.csv \
     --valid-csv-path ../assets/BraTS2018_data/data_index_valid.csv \
